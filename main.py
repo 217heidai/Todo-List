@@ -2,15 +2,16 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from panel import Ui_MainWindow
 import os
-from datetime import date, datetime
+from datetime import datetime
 import calendar
 import sqlite3
 from pygame import mixer
 import webbrowser
 from tts import TTS_BAIDU
 from zhon.hanzi import punctuation
+from croniter import croniter
 
-date_full = str(date.today()).split('-')
+date_full = str(datetime.now().strftime('%Y-%m-%d')).split('-')
 date_name = 'date'+date_full[0]+date_full[1]+date_full[2]
 
 conn = sqlite3.connect('todo.db')
@@ -23,6 +24,20 @@ c.execute(f'''CREATE TABLE IF NOT EXISTS {date_name}(
             time time
          )''')
 conn.commit()
+# status 0-有效，1-无效
+c.execute(f'''CREATE TABLE IF NOT EXISTS crontabtask(
+            id integer PRIMARY KEY,
+            task text,
+            status integer,
+            crontab text
+         )''')
+conn.commit()
+# 创建索引
+try:
+    c.execute(f'CREATE UNIQUE INDEX index_crontabtask ON crontabtask(task)')
+    conn.commit()
+except Exception as e:
+    pass
 
 page_time = 0
 number_task = int()
@@ -231,20 +246,43 @@ class Root(QMainWindow):
         self.set_task()
 
     def __taskDefault(self):
+        def insert(c, conn, task, crontab):
+            new_data = ("""INSERT INTO crontabtask(id, task, status, crontab) VALUES (null,'{}',{},'{}');""".format(task, 0, crontab))
+            c.execute(new_data)
+            conn.commit()
+
         global c
         global conn
         global date_name
 
-        taskDefault = '现在是7点50分，请提醒作战勤务值班员组织交班。'
-        rows = c.execute(f'SELECT COUNT(*) FROM {date_name}')
+        rows = c.execute(f'SELECT COUNT(*) FROM crontabtask')
         for row in rows:
             if row[0] > 0:
                 return
 
         # 插入默认任务
-        new_data = ("""INSERT INTO {}(id, task, status, time) VALUES (null,'{}',{},'{}');""".format(date_name, taskDefault, 0, '07:50:00'))
-        c.execute(new_data)
-        conn.commit()
+        insert(c, conn, '执勤监控安全员同志，请督导前置人员清整卫生。',  '00 07 * * *')
+        insert(c, conn, '现在是7点50分，请提醒作战勤务值班员组织交班。', '50 07 * * *')
+
+    def __taskCrontab(self):
+        global c
+        global conn
+        global date_name
+
+        rows = c.execute(f'SELECT task,crontab FROM crontabtask WHERE crontab<>"* * * * *"')
+        for row in rows:
+            task = row[0]
+            crontab = row[1]
+            iter = croniter(crontab,datetime.now())
+            time = iter.get_next(datetime)
+            date = 'date' + time.strftime("%Y%m%d")
+            time = time.strftime('%H:%M:%S')
+            if date == date_name:
+                tmp_rows = c.execute(f'SELECT COUNT(*) FROM {date_name} WHERE task="{task}" AND time="{time}"')
+                for tmp_row in tmp_rows:
+                    if tmp_row[0] == 0:
+                        c.execute("""INSERT INTO {}(id, task, status, time) VALUES (null,'{}',{},'{}');""".format(date_name, task, 0, time))
+                        conn.commit()
 
     def set_task(self):
         global number
@@ -253,6 +291,9 @@ class Root(QMainWindow):
 
         # 插入默认待办
         self.__taskDefault()
+
+        # 根据定时任务，插入下次执行
+        self.__taskCrontab()
 
         number = 0
         rows = c.execute(f'SELECT COUNT(*) FROM {date_name} WHERE status=0')
@@ -466,13 +507,21 @@ class Root(QMainWindow):
         page_time = 1
 
         if self.taskIdActive > -1:
-            rows = c.execute(f'SELECT time FROM {date_name} WHERE id=%s'%(self.taskIdActive))
+            rows = c.execute(f'SELECT task,time FROM {date_name} WHERE id=%s'%(self.taskIdActive))
             for row in rows:
-                time = row[0]
+                task = row[0]
+                time = row[1]
                 break
             self.ui.hh.setText(time[:2])
             self.ui.mm.setText(time[3:5])
             self.ui.ss.setText(time[6:])
+
+            crontab = '* * * * *'
+            rows = c.execute(f'SELECT crontab FROM crontabtask WHERE task="{task}"')
+            for row in rows:
+                crontab = row[0]
+                break
+            self.ui.crontab.setText(crontab)
 
     def page_clock_cancel(self):
         global page_time
@@ -523,15 +572,15 @@ class Root(QMainWindow):
         self.ui.now_time.setText(display_text)
 
         # set date
-        date_full2 = str(date.today())
-        week = date.today().strftime("%A")
-        today = '%s年%s月%s日，%s' % (date_full2[:4], date_full2[5:7], date_full2[8:],week)
+        date_full2 = str(datetime.now().strftime('%Y-%m-%d'))
+        week = {0:'星期日', 1:'星期一', 2:'星期二', 3:'星期三', 4:'星期四', 5:'星期五', 6:'星期六'}
+        today = '%s年%s月%s日，%s' % (date_full2[:4], date_full2[5:7], date_full2[8:], week[datetime.now().weekday()])
         self.ui.date.setText(today)
         self.ui.date2.setText(today)
         self.ui.date3.setText(today)
 
         # set date - database
-        date_full = str(date.today()).split('-')
+        date_full = str(datetime.now().strftime('%Y-%m-%d')).split('-')
         date_name = 'date' + date_full[0] + date_full[1] + date_full[2]
 
         conn = sqlite3.connect('todo.db')
@@ -564,18 +613,72 @@ class Root(QMainWindow):
                 self.ui.stackedWidget.setCurrentWidget(self.ui.stop_timer)
 
     def set_clock(self):
+        def updatetask(c, conn, date_name, id, date, time, number):
+            # 将今日任务的执行实现更新为crontab的下次执行时间
+            if date == date_name: #下次执行时间为当天的则更新时间
+                c.execute("""UPDATE {} SET time="{}" WHERE id={}""".format(date_name, time, id))
+                conn.commit()
+            else: #下次执行时间为非当天的则删除今日的任务
+                c.execute("""DELETE FROM {} WHERE id={}""".format(date_name, id))
+                conn.commit()
+                self.remover(number)
+
         global c
         global conn
         global date_name
+        global number
 
         if self.taskIdActive > -1:
-            hh = self.ui.hh.text()
-            mm = self.ui.mm.text()
-            ss = self.ui.ss.text()
-            if hh.isdigit() and mm.isdigit() and ss.isdigit() and 0<=int(hh)<=23 and 0<=int(mm)<=60 and 0<=int(ss)<=60:
-                clock = hh+':'+mm+':'+ss
-                c.execute(f'UPDATE %s SET time="%s" WHERE id=%s'%(date_name, clock, self.taskIdActive))
-                conn.commit()
+            # 获取task
+            rows = c.execute(f'SELECT task FROM %s WHERE id=%s'%(date_name, self.taskIdActive))
+            for row in rows:
+                task = row[0]
+                break
+            crontabInSQL = None
+            rows = c.execute(f'SELECT crontab FROM crontabtask WHERE task="{task}"')
+            for row in rows:
+                crontabInSQL = row[0]
+                break
+
+            # 更新定时任务
+            try:
+                crontab = self.ui.crontab.text()
+                iter=croniter(crontab, datetime.now())
+                time = iter.get_next(datetime)
+                date = 'date' + time.strftime("%Y%m%d")
+                time = time.strftime('%H:%M:%S')
+                if crontabInSQL is not None:
+                    if crontab != crontabInSQL:
+                        # 更新定时任务
+                        c.execute(f'UPDATE crontabtask SET crontab="{crontab}" WHERE task="{task}"')
+                        conn.commit()
+                        if crontab != '* * * * *':
+                            # 更新下次执行时间
+                            updatetask(c, conn, date_name, self.taskIdActive, date, time, number)
+                else:
+                    if crontab != '* * * * *':
+                        # 插入定时任务
+                        c.execute("""INSERT INTO crontabtask(id, task, status, crontab) VALUES (null,'{}',{},'{}');""".format(task, 0, crontab))
+                        conn.commit()
+                        # 更新下次执行时间
+                        updatetask(c, conn, date_name, self.taskIdActive, date, time, number)
+            except Exception as e:
+                self.ui.crontab.setText('* * * * *')
+                crontab = '* * * * *' #设置为无效
+
+            # 更新今日任务
+            if crontab == '* * * * *':
+                # 设置时间
+                hh = self.ui.hh.text()
+                mm = self.ui.mm.text()
+                ss = self.ui.ss.text()
+                if hh.isdigit() and mm.isdigit() and ss.isdigit() and 0<=int(hh)<=23 and 0<=int(mm)<=60 and 0<=int(ss)<=60:
+                    hh = hh if len(hh) == 2 else '0' + hh
+                    mm = mm if len(mm) == 2 else '0' + mm
+                    ss = ss if len(ss) == 2 else '0' + ss
+                    clock = hh+':'+mm+':'+ss
+                    c.execute(f'UPDATE %s SET time="%s" WHERE id=%s'%(date_name, clock, self.taskIdActive))
+                    conn.commit()
 
     def stop_clock(self):
         global number
@@ -606,6 +709,7 @@ class Root(QMainWindow):
     def calender_search(self):
         global c
         global conn
+        global date_name
         self.ui.com1_cal.hide()
         self.ui.com2_cal.hide()
         self.ui.com3_cal.hide()
@@ -643,95 +747,117 @@ class Root(QMainWindow):
             now = datetime.now()
             self.ui.date_cal.clear()
             self.ui.date_cal.setText(now.strftime('%Y/%m/%d'))
-        if len(self.ui.date_cal.text()) == 10:
-            names = self.ui.date_cal.text().split('/')
-            name = 'date'+names[0]+names[1]+names[2]
-            c.execute(f'''CREATE TABLE IF NOT EXISTS {name}(
-                        id integer PRIMARY KEY,
-                        task text,
-                        status integer,
-                        time time
-                     )''')
-            conn.commit()
+        
+        try:
+            if len(self.ui.date_cal.text()) == 10:
+                names = self.ui.date_cal.text().split('/')
+                if not (2021 <= int(names[0]) and 1<=int(names[1])<=12 and 1<=int(names[2])<=31):
+                    return
+                name = 'date'+names[0]+names[1]+names[2]
+                c.execute(f'''CREATE TABLE IF NOT EXISTS {name}(
+                            id integer PRIMARY KEY,
+                            task text,
+                            status integer,
+                            time time
+                        )''')
+                conn.commit()
+        except Exception as e:
+            return
 
-            tasks = c.execute(f'SELECT * FROM {name}')
-            count_com = 0
-            count_task = 0
-            # id, task, status, time
-            for row in tasks:
-                if row[2] == 1 and len(row[1]) != 0:
-                    count_com += 1
-                    if count_com == 1:
-                        self.ui.com1_cal.show()
-                        self.ui.True1.show()
-                        self.ui.com1_cal.setText(row[1])
-                    elif count_com == 2:
-                        self.ui.com2_cal.show()
-                        self.ui.True2.show()
-                        self.ui.com2_cal.setText(row[1])
-                    elif count_com == 3:
-                        self.ui.com3_cal.show()
-                        self.ui.True3.show()
-                        self.ui.com3_cal.setText(row[1])
-                    elif count_com == 4:
-                        self.ui.com4_cal.show()
-                        self.ui.True4.show()
-                        self.ui.com4_cal.setText(row[1])
-                    elif count_com == 5:
-                        self.ui.com5_cal.show()
-                        self.ui.True5.show()
-                        self.ui.com5_cal.setText(row[1])
-                    elif count_com == 6:
-                        self.ui.com6_cal.show()
-                        self.ui.True6.show()
-                        self.ui.com6_cal.setText(row[1])
-                    elif count_com == 7:
-                        self.ui.com7_cal.show()
-                        self.ui.True7.show()
-                        self.ui.com7_cal.setText(row[1])
-                    elif count_com == 8:
-                        self.ui.com8_cal.show()
-                        self.ui.True8.show()
-                        self.ui.com8_cal.setText(row[1])
+        # 查询今日任务
+        tasks = c.execute(f'SELECT * FROM {name}')
+        taskList = []
+        for task in tasks:
+            taskList.append(task)
+        # 查询crontab任务
+        try:
+            if name != date_name:
+                rows = c.execute(f'SELECT task,crontab FROM crontabtask WHERE crontab<>"* * * * *"')
+                for row in rows:
+                    task = row[0]
+                    crontab = row[1]
+                    iter = croniter(crontab,datetime.now())
+                    time = iter.get_next(datetime)
+                    date = 'date' + time.strftime("%Y%m%d")
+                    time = time.strftime('%H:%M:%S')
+                    if date == name:
+                        taskList.append((-1, task, 0, time))
+        except Exception as e:
+            pass
+        
+        count_com = 0
+        count_task = 0
+        # id, task, status, time
+        for row in taskList:
+            if row[2] == 1 and len(row[1]) != 0:
+                count_com += 1
+                if count_com == 1:
+                    self.ui.com1_cal.show()
+                    self.ui.True1.show()
+                    self.ui.com1_cal.setText(row[1])
+                elif count_com == 2:
+                    self.ui.com2_cal.show()
+                    self.ui.True2.show()
+                    self.ui.com2_cal.setText(row[1])
+                elif count_com == 3:
+                    self.ui.com3_cal.show()
+                    self.ui.True3.show()
+                    self.ui.com3_cal.setText(row[1])
+                elif count_com == 4:
+                    self.ui.com4_cal.show()
+                    self.ui.True4.show()
+                    self.ui.com4_cal.setText(row[1])
+                elif count_com == 5:
+                    self.ui.com5_cal.show()
+                    self.ui.True5.show()
+                    self.ui.com5_cal.setText(row[1])
+                elif count_com == 6:
+                    self.ui.com6_cal.show()
+                    self.ui.True6.show()
+                    self.ui.com6_cal.setText(row[1])
+                elif count_com == 7:
+                    self.ui.com7_cal.show()
+                    self.ui.True7.show()
+                    self.ui.com7_cal.setText(row[1])
+                elif count_com == 8:
+                    self.ui.com8_cal.show()
+                    self.ui.True8.show()
+                    self.ui.com8_cal.setText(row[1])
 
-                elif row[2] == 0 and len(row[1]) != 0:
-                    count_task += 1
-                    if count_task == 1:
-                        self.ui.task1_cal.show()
-                        self.ui.False1.show()
-                        self.ui.task1_cal.setText(row[1])
-                    elif count_task == 2:
-                        self.ui.task2_cal.show()
-                        self.ui.False2.show()
-                        self.ui.task2_cal.setText(row[1])
-                    elif count_task == 3:
-                        self.ui.task3_cal.show()
-                        self.ui.False3.show()
-                        self.ui.task3_cal.setText(row[1])
-                    elif count_task == 4:
-                        self.ui.task4_cal.show()
-                        self.ui.False4.show()
-                        self.ui.task4_cal.setText(row[1])
-                    elif count_task == 5:
-                        self.ui.task5_cal.show()
-                        self.ui.False5.show()
-                        self.ui.task5_cal.setText(row[1])
-                    elif count_task == 6:
-                        self.ui.task6_cal.show()
-                        self.ui.False6.show()
-                        self.ui.task6_cal.setText(row[1])
-                    elif count_task == 7:
-                        self.ui.task7_cal.show()
-                        self.ui.False7.show()
-                        self.ui.task7_cal.setText(row[1])
-                    elif count_task == 8:
-                        self.ui.task8_cal.show()
-                        self.ui.False8.show()
-                        self.ui.task8_cal.setText(row[1])
-        else:
-            now = datetime.now()
-            self.ui.date_cal.clear()
-            self.ui.date_cal.setPlaceholderText('请输入日期查询：%s'%(now.strftime('%Y/%m/%d')))
+            elif row[2] == 0 and len(row[1]) != 0:
+                count_task += 1
+                if count_task == 1:
+                    self.ui.task1_cal.show()
+                    self.ui.False1.show()
+                    self.ui.task1_cal.setText(row[1])
+                elif count_task == 2:
+                    self.ui.task2_cal.show()
+                    self.ui.False2.show()
+                    self.ui.task2_cal.setText(row[1])
+                elif count_task == 3:
+                    self.ui.task3_cal.show()
+                    self.ui.False3.show()
+                    self.ui.task3_cal.setText(row[1])
+                elif count_task == 4:
+                    self.ui.task4_cal.show()
+                    self.ui.False4.show()
+                    self.ui.task4_cal.setText(row[1])
+                elif count_task == 5:
+                    self.ui.task5_cal.show()
+                    self.ui.False5.show()
+                    self.ui.task5_cal.setText(row[1])
+                elif count_task == 6:
+                    self.ui.task6_cal.show()
+                    self.ui.False6.show()
+                    self.ui.task6_cal.setText(row[1])
+                elif count_task == 7:
+                    self.ui.task7_cal.show()
+                    self.ui.False7.show()
+                    self.ui.task7_cal.setText(row[1])
+                elif count_task == 8:
+                    self.ui.task8_cal.show()
+                    self.ui.False8.show()
+                    self.ui.task8_cal.setText(row[1])
 
     def contact(self):
         webbrowser.open('https://github.com/217heidai')
