@@ -19,5 +19,8 @@ class Config(object):
 
 if __name__ == '__main__':
     conf = Config(os.getcwd() + '/conf/conf.ini')
-    print(conf.getConfig('user', 'name'))
-    print(conf.getConfig('user', 'abridge'))
+    print(conf.getConfig('APP', 'name'))
+    print(conf.getConfig('USER', 'name'))
+    print(conf.getConfig('TITLE', 'title1'))
+    print(conf.getConfig('TITLE', 'title2'))
+    print(conf.getConfig('TITLE', 'title3'))

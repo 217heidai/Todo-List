@@ -13,14 +13,17 @@ from PyQt5.QtGui import QMovie
 
 
 class Ui_MainWindow(object):
-    def setupUi(self, MainWindow):
+    def setupUi(self, MainWindow, width, height):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(1281, 851)
+        #MainWindow.resize(1281, 851)
+        MainWindow.resize(width, height)
+        X_start = (width - 1281)/2
+        Y_start = (height - 851)/2
         MainWindow.setStyleSheet("background-color: none;")
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.stackedWidget = QtWidgets.QStackedWidget(self.centralwidget)
-        self.stackedWidget.setGeometry(QtCore.QRect(0, 0, 1281, 851))
+        self.stackedWidget.setGeometry(QtCore.QRect(X_start+0, Y_start+0, 1281, 851))
         font = QtGui.QFont()
         font.setBold(True)
         font.setWeight(75)
@@ -173,6 +176,7 @@ class Ui_MainWindow(object):
         self.cal_icon.setObjectName("cal_icon")
         self.label_6 = QtWidgets.QLabel(self.day)
         self.label_6.setGeometry(QtCore.QRect(340, 0, 941, 851))
+        #self.label_6.setGeometry(QtCore.QRect(340, 0, width - 340, height))
         self.label_6.setText("")
         self.label_6.setPixmap(QtGui.QPixmap("images/bak_day.jpg"))
         self.label_6.setObjectName("label_6")
@@ -250,6 +254,7 @@ class Ui_MainWindow(object):
 "background-color: rgb(251, 226, 255);")
         self.addtask.setAlignment(QtCore.Qt.AlignCenter)
         self.addtask.setObjectName("addtask")
+        '''
         self.close1 = QtWidgets.QPushButton(self.day)
         self.close1.setGeometry(QtCore.QRect(1240, 10, 31, 31))
         self.close1.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
@@ -282,6 +287,7 @@ class Ui_MainWindow(object):
         self.mini1.setIcon(icon1)
         self.mini1.setIconSize(QtCore.QSize(36, 37))
         self.mini1.setObjectName("mini1")
+        '''
         self.plus_label = QtWidgets.QLabel(self.day)
         self.plus_label.setGeometry(QtCore.QRect(420, 755, 55, 51))
         font = QtGui.QFont()
@@ -316,9 +322,11 @@ class Ui_MainWindow(object):
         self.myday_title.setObjectName("myday_title")
         self.label_29 = QtWidgets.QLabel(self.day_task)
         self.label_29.setGeometry(QtCore.QRect(340, 0, 941, 851))
+        #self.label_29.setGeometry(QtCore.QRect(340, 0, width - 340, height))
         self.label_29.setText("")
         self.label_29.setPixmap(QtGui.QPixmap("images/bak_day.jpg"))
         self.label_29.setObjectName("label_29")
+        '''
         self.mini2 = QtWidgets.QPushButton(self.day_task)
         self.mini2.setGeometry(QtCore.QRect(1200, 10, 31, 31))
         self.mini2.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
@@ -332,6 +340,7 @@ class Ui_MainWindow(object):
         self.mini2.setIcon(icon1)
         self.mini2.setIconSize(QtCore.QSize(36, 37))
         self.mini2.setObjectName("mini2")
+        '''
         self.addtask_3 = QtWidgets.QLineEdit(self.day_task)
         self.addtask_3.setGeometry(QtCore.QRect(420, 750, 781, 61))
         font = QtGui.QFont()
@@ -505,6 +514,7 @@ class Ui_MainWindow(object):
         self.date2.setFont(font)
         self.date2.setStyleSheet("color: rgb(255, 255, 255);")
         self.date2.setObjectName("date2")
+        '''
         self.close2 = QtWidgets.QPushButton(self.day_task)
         self.close2.setGeometry(QtCore.QRect(1240, 10, 31, 31))
         self.close2.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
@@ -518,6 +528,7 @@ class Ui_MainWindow(object):
         self.close2.setIcon(icon)
         self.close2.setIconSize(QtCore.QSize(36, 37))
         self.close2.setObjectName("close2")
+        '''
         self.task1 = QtWidgets.QLabel(self.day_task)
         self.task1.setGeometry(QtCore.QRect(380, 130, 861, 51))
         font = QtGui.QFont()
@@ -891,12 +902,12 @@ class Ui_MainWindow(object):
         self.timer6.setIconSize(QtCore.QSize(36, 37))
         self.timer6.setObjectName("timer6")
         self.label_29.raise_()
-        self.mini2.raise_()
+        #self.mini2.raise_()
         self.addtask_3.raise_()
         self.plus_label2.raise_()
         self.frame_3.raise_()
         self.date2.raise_()
-        self.close2.raise_()
+        #self.close2.raise_()
         self.myday_title.raise_()
         self.task1.raise_()
         self.task2.raise_()
@@ -1194,6 +1205,7 @@ class Ui_MainWindow(object):
         self.completed_title.setObjectName("completed_title")
         self.label_31 = QtWidgets.QLabel(self.completed)
         self.label_31.setGeometry(QtCore.QRect(340, 0, 941, 851))
+        #self.label_31.setGeometry(QtCore.QRect(340, 0, width - 340, height))
         self.label_31.setText("")
         self.label_31.setPixmap(QtGui.QPixmap("images/bak_com.jpg"))
         self.label_31.setObjectName("label_31")
@@ -1221,6 +1233,7 @@ class Ui_MainWindow(object):
         self.com3.setText("")
         self.com3.setAlignment(QtCore.Qt.AlignCenter)
         self.com3.setObjectName("com3")
+        '''
         self.mini3 = QtWidgets.QPushButton(self.completed)
         self.mini3.setGeometry(QtCore.QRect(1200, 10, 31, 31))
         self.mini3.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
@@ -1234,6 +1247,7 @@ class Ui_MainWindow(object):
         self.mini3.setIcon(icon1)
         self.mini3.setIconSize(QtCore.QSize(36, 37))
         self.mini3.setObjectName("mini3")
+        '''
         self.date3 = QtWidgets.QLabel(self.completed)
         self.date3.setGeometry(QtCore.QRect(380, 90, 191, 21))
         font = QtGui.QFont()
@@ -1434,6 +1448,7 @@ class Ui_MainWindow(object):
         self.com2.setText("")
         self.com2.setAlignment(QtCore.Qt.AlignCenter)
         self.com2.setObjectName("com2")
+        '''
         self.close3 = QtWidgets.QPushButton(self.completed)
         self.close3.setGeometry(QtCore.QRect(1240, 10, 31, 31))
         self.close3.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
@@ -1447,19 +1462,20 @@ class Ui_MainWindow(object):
         self.close3.setIcon(icon)
         self.close3.setIconSize(QtCore.QSize(36, 37))
         self.close3.setObjectName("close3")
+        '''
         self.label_31.raise_()
         self.com6.raise_()
         self.com7.raise_()
         self.com1.raise_()
         self.com5.raise_()
         self.com3.raise_()
-        self.mini3.raise_()
+        #self.mini3.raise_()
         self.date3.raise_()
         self.frame_5.raise_()
         self.com8.raise_()
         self.com4.raise_()
         self.com2.raise_()
-        self.close3.raise_()
+        #self.close3.raise_()
         self.completed_title.raise_()
         self.stackedWidget.addWidget(self.completed)
         self.calender = QtWidgets.QWidget()
@@ -1643,6 +1659,7 @@ class Ui_MainWindow(object):
         self.abo_icon4.raise_()
         self.cal_icon4.raise_()
         self.show_pag_select4.raise_()
+        '''
         self.mini4 = QtWidgets.QPushButton(self.calender)
         self.mini4.setGeometry(QtCore.QRect(1200, 10, 31, 31))
         self.mini4.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
@@ -1657,8 +1674,10 @@ class Ui_MainWindow(object):
         self.mini4.setIcon(icon1)
         self.mini4.setIconSize(QtCore.QSize(36, 37))
         self.mini4.setObjectName("mini4")
+        '''
         self.label_33 = QtWidgets.QLabel(self.calender)
         self.label_33.setGeometry(QtCore.QRect(340, 0, 941, 851))
+        #self.label_33.setGeometry(QtCore.QRect(340, 0, width - 340, height))
         self.label_33.setText("")
         self.label_33.setPixmap(QtGui.QPixmap("images/bak_cal.jpg"))
         self.label_33.setObjectName("label_33")
@@ -1670,6 +1689,7 @@ class Ui_MainWindow(object):
         self.calender_title.setFont(font)
         self.calender_title.setStyleSheet("color: rgb(255, 255, 255);")
         self.calender_title.setObjectName("calender_title")
+        '''
         self.close4 = QtWidgets.QPushButton(self.calender)
         self.close4.setGeometry(QtCore.QRect(1240, 10, 31, 31))
         self.close4.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
@@ -1684,6 +1704,7 @@ class Ui_MainWindow(object):
         self.close4.setIcon(icon)
         self.close4.setIconSize(QtCore.QSize(36, 37))
         self.close4.setObjectName("close4")
+        '''
         self.task1_cal = QtWidgets.QLabel(self.calender)
         self.task1_cal.setGeometry(QtCore.QRect(820, 210, 431, 51))
         font = QtGui.QFont()
@@ -1961,9 +1982,9 @@ class Ui_MainWindow(object):
         self.com1_cal.raise_()
         self.com2_cal.raise_()
         self.frame_6.raise_()
-        self.mini4.raise_()
+        #self.mini4.raise_()
         self.calender_title.raise_()
-        self.close4.raise_()
+        #self.close4.raise_()
         self.task1_cal.raise_()
         self.task2_cal.raise_()
         self.com3_cal.raise_()
@@ -2071,6 +2092,7 @@ class Ui_MainWindow(object):
         self.stackedWidget.addWidget(self.calender)
         self.about = QtWidgets.QWidget()
         self.about.setObjectName("about")
+        '''
         self.close5 = QtWidgets.QPushButton(self.about)
         self.close5.setGeometry(QtCore.QRect(1240, 10, 31, 31))
         self.close5.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
@@ -2085,6 +2107,7 @@ class Ui_MainWindow(object):
         self.close5.setIcon(icon)
         self.close5.setIconSize(QtCore.QSize(36, 37))
         self.close5.setObjectName("close5")
+        '''
         self.frame_7 = QtWidgets.QFrame(self.about)
         self.frame_7.setGeometry(QtCore.QRect(0, 0, 341, 861))
         self.frame_7.setStyleSheet("background-color: rgb(255, 255, 255);\n"
@@ -2239,6 +2262,7 @@ class Ui_MainWindow(object):
         self.abo_icon5.raise_()
         self.cal_icon5.raise_()
         self.show_pag_select5.raise_()
+        '''
         self.mini5 = QtWidgets.QPushButton(self.about)
         self.mini5.setGeometry(QtCore.QRect(1200, 10, 31, 31))
         self.mini5.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
@@ -2253,8 +2277,10 @@ class Ui_MainWindow(object):
         self.mini5.setIcon(icon1)
         self.mini5.setIconSize(QtCore.QSize(36, 37))
         self.mini5.setObjectName("mini5")
+        '''
         self.label_59 = QtWidgets.QLabel(self.about)
         self.label_59.setGeometry(QtCore.QRect(340, 0, 941, 851))
+        #self.label_59.setGeometry(QtCore.QRect(340, 0, width - 340, height))
         self.label_59.setText("")
         self.label_59.setPixmap(QtGui.QPixmap("images/bak_abo.jpg"))
         self.label_59.setObjectName("label_59")
@@ -2309,15 +2335,16 @@ class Ui_MainWindow(object):
         self.contactme.setObjectName("contactme")
         self.label_59.raise_()
         self.frame_7.raise_()
-        self.close5.raise_()
+        #self.close5.raise_()
         self.about_title.raise_()
-        self.mini5.raise_()
+        #self.mini5.raise_()
         self.frame_8.raise_()
         self.stackedWidget.addWidget(self.about)
         MainWindow.setCentralWidget(self.centralwidget)
 
         self.retranslateUi(MainWindow)
         self.stackedWidget.setCurrentIndex(0)
+        '''
         self.close1.clicked.connect(MainWindow.close)
         self.mini1.clicked.connect(MainWindow.showMinimized)
         self.close2.clicked.connect(MainWindow.close)
@@ -2328,11 +2355,13 @@ class Ui_MainWindow(object):
         self.mini4.clicked.connect(MainWindow.showMinimized)
         self.close5.clicked.connect(MainWindow.close)
         self.mini5.clicked.connect(MainWindow.showMinimized)
+        '''
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "To Do List"))
+        MainWindow.setWindowIcon(QtGui.QIcon("images/To_Do.ico"))
         self.nameapp.setText(_translate("MainWindow", "To Do List"))
         self.profile.setText(_translate("MainWindow", "A"))
         self.nameuser.setText(_translate("MainWindow", "Admin"))
