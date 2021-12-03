@@ -1,6 +1,7 @@
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
+from PyQt5.Qt import *
 from panel import Ui_MainWindow
 import os
 from datetime import datetime
@@ -71,6 +72,9 @@ class Root(QMainWindow):
 
         self.__initUI()
 
+        # 插入默认待办
+        self.__taskDefault()
+
         self.set_task()
 
         timer = QTimer(self)
@@ -105,6 +109,12 @@ class Root(QMainWindow):
         self.ui.timer8.clicked.connect(lambda: self.ui.stackedWidget.setCurrentWidget(self.ui.set_timer))
         self.ui.timer8.clicked.connect(self.active_task8)
         self.ui.timer8.clicked.connect(self.page_clock)
+        self.ui.timer9.clicked.connect(lambda: self.ui.stackedWidget.setCurrentWidget(self.ui.set_timer))
+        self.ui.timer9.clicked.connect(self.active_task9)
+        self.ui.timer9.clicked.connect(self.page_clock)
+        self.ui.timer10.clicked.connect(lambda: self.ui.stackedWidget.setCurrentWidget(self.ui.set_timer))
+        self.ui.timer10.clicked.connect(self.active_task10)
+        self.ui.timer10.clicked.connect(self.page_clock)
 
         self.ui.cancel_time.clicked.connect(lambda: self.ui.stackedWidget.setCurrentWidget(self.ui.day_task))
         self.ui.cancel_time.clicked.connect(self.page_clock_cancel)
@@ -167,6 +177,10 @@ class Root(QMainWindow):
         self.ui.delete7.clicked.connect(self.remove_task)
         self.ui.delete8.clicked.connect(self.active_task8)
         self.ui.delete8.clicked.connect(self.remove_task)
+        self.ui.delete9.clicked.connect(self.active_task9)
+        self.ui.delete9.clicked.connect(self.remove_task)
+        self.ui.delete10.clicked.connect(self.active_task10)
+        self.ui.delete10.clicked.connect(self.remove_task)
 
         # Completed task
         self.ui.sub1.clicked.connect(self.active_task1)
@@ -185,19 +199,82 @@ class Root(QMainWindow):
         self.ui.sub7.clicked.connect(self.sub_task)
         self.ui.sub8.clicked.connect(self.active_task8)
         self.ui.sub8.clicked.connect(self.sub_task)
+        self.ui.sub9.clicked.connect(self.active_task9)
+        self.ui.sub9.clicked.connect(self.sub_task)
+        self.ui.sub10.clicked.connect(self.active_task10)
+        self.ui.sub10.clicked.connect(self.sub_task)
 
         # link contact
         self.ui.contactme.clicked.connect(self.contact)
 
         # 8项待办事项的ID
-        self.taskIdList = []
+        self.__taskIdList = []
 
         # 当前选中任务的ID
-        self.taskIdActive = -1
+        self.__taskIdActive = -1
+
+        # 是否倒计时
+        self.__isCountdown = False
 
         self.tts = TTS_BAIDU()
 
     def __initUI(self):
+        # 今日待办UI
+        self.__ui_task_list = [[self.ui.task1, self.ui.sub1, self.ui.delete1, self.ui.timer1],
+                               [self.ui.task2, self.ui.sub2, self.ui.delete2, self.ui.timer2],
+                               [self.ui.task3, self.ui.sub3, self.ui.delete3, self.ui.timer3],
+                               [self.ui.task4, self.ui.sub4, self.ui.delete4, self.ui.timer4],
+                               [self.ui.task5, self.ui.sub5, self.ui.delete5, self.ui.timer5],
+                               [self.ui.task6, self.ui.sub6, self.ui.delete6, self.ui.timer6],
+                               [self.ui.task7, self.ui.sub7, self.ui.delete7, self.ui.timer7],
+                               [self.ui.task8, self.ui.sub8, self.ui.delete8, self.ui.timer8],
+                               [self.ui.task9, self.ui.sub9, self.ui.delete9, self.ui.timer9],
+                               [self.ui.task10, self.ui.sub10, self.ui.delete10, self.ui.timer10]]
+
+        # 今日办结UI
+        self.__ui_completed_list = [self.ui.com1,
+                                    self.ui.com2,
+                                    self.ui.com3,
+                                    self.ui.com4,
+                                    self.ui.com5,
+                                    self.ui.com6,
+                                    self.ui.com7,
+                                    self.ui.com8,
+                                    self.ui.com9,
+                                    self.ui.com10,
+                                    self.ui.com11,
+                                    self.ui.com12,
+                                    self.ui.com13,
+                                    self.ui.com14,
+                                    self.ui.com15, 
+                                    self.ui.com16,
+                                    self.ui.com17,
+                                    self.ui.com18,
+                                    self.ui.com19,
+                                    self.ui.com20]
+
+        # 待办查询UI
+        self.__ui_calender_com_List = [[self.ui.com1_cal, self.ui.True1],
+                                       [self.ui.com2_cal, self.ui.True2],
+                                       [self.ui.com3_cal, self.ui.True3],
+                                       [self.ui.com4_cal, self.ui.True4],
+                                       [self.ui.com5_cal, self.ui.True5],
+                                       [self.ui.com6_cal, self.ui.True6],
+                                       [self.ui.com7_cal, self.ui.True7],
+                                       [self.ui.com8_cal, self.ui.True8],
+                                       [self.ui.com9_cal, self.ui.True9],
+                                       [self.ui.com10_cal, self.ui.True10]]
+        self.__ui_calender_task_List = [[self.ui.task1_cal, self.ui.False1],
+                                        [self.ui.task2_cal, self.ui.False2],
+                                        [self.ui.task3_cal, self.ui.False3],
+                                        [self.ui.task4_cal, self.ui.False4],
+                                        [self.ui.task5_cal, self.ui.False5],
+                                        [self.ui.task6_cal, self.ui.False6],
+                                        [self.ui.task7_cal, self.ui.False7],
+                                        [self.ui.task8_cal, self.ui.False8],
+                                        [self.ui.task9_cal, self.ui.False9],
+                                        [self.ui.task10_cal, self.ui.False10]]
+
         conf = Config(os.getcwd() + '/conf/conf.ini')
         
         # set APP name
@@ -281,9 +358,10 @@ class Root(QMainWindow):
         self.oldPos = evt.globalPos()
 
     def mouseMoveEvent(self, evt):
-        delta = QPoint(evt.globalPos() - self.oldPos)
-        self.move(self.x() + delta.x(), self.y() + delta.y())
-        self.oldPos = evt.globalPos()
+        if not self.windowState() == Qt.WindowFullScreen: # 仅非全屏状态下可以拖动窗口
+            delta = QPoint(evt.globalPos() - self.oldPos)
+            self.move(self.x() + delta.x(), self.y() + delta.y())
+            self.oldPos = evt.globalPos()
 
     def submit(self):
         global number_task
@@ -361,9 +439,6 @@ class Root(QMainWindow):
         global date_name
         global page_time
 
-        # 插入默认待办
-        self.__taskDefault()
-
         # 根据定时任务，插入下次执行
         self.__taskCrontab()
 
@@ -377,141 +452,80 @@ class Root(QMainWindow):
             self.ui.stackedWidget.setCurrentWidget(self.ui.day)
 
         # 清空任务ID
-        self.taskIdList = []
-
+        self.__taskIdList = []
         count = 0
         tasks = c.execute(f'SELECT * FROM {date_name} WHERE status=0 ORDER BY time ASC')
         #id, task, status, time
         for row in tasks:
-            count += 1
-            #txt = '【%s】%s'%(row[3],row[1])
-            txt = row[1]
-            if count == 1:
+            if count == 0:
                 if page_time != 1:
                     self.ui.stackedWidget.setCurrentWidget(self.ui.day_task)
-                self.ui.task1.show()
-                self.ui.task1.setText(txt)
-                self.ui.sub1.show()
-                self.ui.delete1.show()
-                self.ui.timer1.show()
-                self.taskIdList.append(row[0])
-            elif count == 2:
-                self.ui.task2.show()
-                self.ui.task2.setText(txt)
-                self.ui.sub2.show()
-                self.ui.delete2.show()
-                self.ui.timer2.show()
-                self.taskIdList.append(row[0])
-            elif count == 3:
-                self.ui.task3.show()
-                self.ui.task3.setText(txt)
-                self.ui.sub3.show()
-                self.ui.delete3.show()
-                self.ui.timer3.show()
-                self.taskIdList.append(row[0])
-            elif count == 4:
-                self.ui.task4.show()
-                self.ui.task4.setText(txt)
-                self.ui.sub4.show()
-                self.ui.delete4.show()
-                self.ui.timer4.show()
-                self.taskIdList.append(row[0])
-            elif count == 5:
-                self.ui.task5.show()
-                self.ui.task5.setText(txt)
-                self.ui.sub5.show()
-                self.ui.delete5.show()
-                self.ui.timer5.show()
-                self.taskIdList.append(row[0])
-            elif count == 6:
-                self.ui.task6.show()
-                self.ui.task6.setText(txt)
-                self.ui.sub6.show()
-                self.ui.delete6.show()
-                self.ui.timer6.show()
-                self.taskIdList.append(row[0])
-            elif count == 7:
-                self.ui.task7.show()
-                self.ui.task7.setText(txt)
-                self.ui.sub7.show()
-                self.ui.delete7.show()
-                self.ui.timer7.show()
-                self.taskIdList.append(row[0])
-            elif count == 8:
-                self.ui.task8.show()
-                self.ui.task8.setText(txt)
-                self.ui.sub8.show()
-                self.ui.delete8.show()
-                self.ui.timer8.show()
-                self.taskIdList.append(row[0])
-            else:
+            
+            if count >= len(self.__ui_task_list):
                 break
+            self.__ui_task_list[count][0].show()
+            self.__ui_task_list[count][0].setText(row[1])
+            self.__ui_task_list[count][1].show()
+            self.__ui_task_list[count][2].show()
+            self.__ui_task_list[count][3].show()
+            self.__taskIdList.append(row[0])
+            count += 1
+
+        #重新设置number
+        number = count
 
     def set_completed(self):
+        global c
         global date_name
+        
         count = 0
         tasks = c.execute(f'SELECT * FROM {date_name} WHERE status=1 ORDER BY time ASC')
         for row in tasks:
-            count += 1
-            txt = row[1]
-            if count == 1:
-                self.ui.com1.show()
-                self.ui.com1.setText(txt)
-            elif count == 2:
-                self.ui.com2.show()
-                self.ui.com2.setText(txt)
-            elif count == 3:
-                self.ui.com3.show()
-                self.ui.com3.setText(txt)
-            elif count == 4:
-                self.ui.com4.show()
-                self.ui.com4.setText(txt)
-            elif count == 5:
-                self.ui.com5.show()
-                self.ui.com5.setText(txt)
-            elif count == 6:
-                self.ui.com6.show()
-                self.ui.com6.setText(txt)
-            elif count == 7:
-                self.ui.com7.show()
-                self.ui.com7.setText(txt)
-            elif count == 8:
-                self.ui.com8.show()
-                self.ui.com8.setText(txt)
-            else:
+            if count >= len(self.__ui_completed_list):
                 break
+            self.__ui_completed_list[count].show()
+            self.__ui_completed_list[count].setText(row[1])
+            count += 1
 
     def active_task1(self):
         print('active task 1: %s'%self.ui.task1.text())
-        self.taskIdActive = self.taskIdList[0]
+        self.__taskIdActive = self.__taskIdList[0]
 
     def active_task2(self):
         print('active task 2: %s'%self.ui.task2.text())
-        self.taskIdActive = self.taskIdList[1]
+        self.__taskIdActive = self.__taskIdList[1]
 
     def active_task3(self):
         print('active task 3: %s'%self.ui.task3.text())
-        self.taskIdActive = self.taskIdList[2]
+        self.__taskIdActive = self.__taskIdList[2]
 
     def active_task4(self):
         print('active task 4: %s'%self.ui.task4.text())
-        self.taskIdActive = self.taskIdList[3]
+        self.__taskIdActive = self.__taskIdList[3]
 
     def active_task5(self):
         print('active task 5: %s'%self.ui.task5.text())
-        self.taskIdActive = self.taskIdList[4]
+        self.__taskIdActive = self.__taskIdList[4]
 
     def active_task6(self):
         print('active task 6: %s'%self.ui.task6.text())
-        self.taskIdActive = self.taskIdList[5]
+        self.__taskIdActive = self.__taskIdList[5]
 
     def active_task7(self):
         print('active task 7: %s'%self.ui.task7.text())
-        self.taskIdActive = self.taskIdList[6]
+        self.__taskIdActive = self.__taskIdList[6]
 
     def active_task8(self):
         print('active task 8: %s'%self.ui.task8.text())
-        self.taskIdActive = self.taskIdList[7]
+        self.__taskIdActive = self.__taskIdList[7]
+
+    def active_task9(self):
+        print('active task 9: %s'%self.ui.task9.text())
+        self.__taskIdActive = self.__taskIdList[8]
+
+    def active_task10(self):
+        print('active task 10: %s'%self.ui.task10.text())
+        self.__taskIdActive = self.__taskIdList[9]
 
     def remove_task(self):
         global c
@@ -519,68 +533,27 @@ class Root(QMainWindow):
         global number
         global date_name
 
-        if self.taskIdActive > -1:
-            c.execute(f'UPDATE {date_name} SET status=2 WHERE id=%s'%(self.taskIdActive))
+        if self.__taskIdActive > -1:
+            c.execute(f'UPDATE {date_name} SET status=2 WHERE id=%s'%(self.__taskIdActive))
             conn.commit()
             self.remover(number)
             self.set_task()
 
     def remover(self, num):
-        self.ui.task1.clear()
-        self.ui.task2.clear()
-        self.ui.task3.clear()
-        self.ui.task4.clear()
-        self.ui.task5.clear()
-        self.ui.task6.clear()
-        self.ui.task7.clear()
-        self.ui.task8.clear()
-        if num == 8:
-            self.ui.task8.hide()
-            self.ui.sub8.hide()
-            self.ui.delete8.hide()
-            self.ui.timer8.hide()
-        elif num == 7:
-            self.ui.task7.hide()
-            self.ui.sub7.hide()
-            self.ui.delete7.hide()
-            self.ui.timer7.hide()
-        elif num == 6:
-            self.ui.task6.hide()
-            self.ui.sub6.hide()
-            self.ui.delete6.hide()
-            self.ui.timer6.hide()
-        elif num == 5:
-            self.ui.task5.hide()
-            self.ui.sub5.hide()
-            self.ui.delete5.hide()
-            self.ui.timer5.hide()
-        elif num == 4:
-            self.ui.task4.hide()
-            self.ui.sub4.hide()
-            self.ui.delete4.hide()
-            self.ui.timer4.hide()
-        elif num == 3:
-            self.ui.task3.hide()
-            self.ui.sub3.hide()
-            self.ui.delete3.hide()
-            self.ui.timer3.hide()
-        elif num == 2:
-            self.ui.task2.hide()
-            self.ui.sub2.hide()
-            self.ui.delete2.hide()
-            self.ui.timer2.hide()
-        elif num == 1:
-            self.ui.task1.hide()
-            self.ui.sub1.hide()
-            self.ui.delete1.hide()
-            self.ui.timer1.hide()
+        for items in self.__ui_task_list:
+            items[0].clear()
+
+        self.__ui_task_list[num - 1][0].hide()
+        self.__ui_task_list[num - 1][1].hide()
+        self.__ui_task_list[num - 1][2].hide()
+        self.__ui_task_list[num - 1][3].hide()
 
     def page_clock(self):
         global page_time
         page_time = 1
 
-        if self.taskIdActive > -1:
-            rows = c.execute(f'SELECT task,time FROM {date_name} WHERE id=%s'%(self.taskIdActive))
+        if self.__taskIdActive > -1:
+            rows = c.execute(f'SELECT task,time FROM {date_name} WHERE id=%s'%(self.__taskIdActive))
             for row in rows:
                 task = row[0]
                 time = row[1]
@@ -639,6 +612,17 @@ class Root(QMainWindow):
             mixer.music.play(loops = 3)
         '''
 
+    # 日切时清空今日待办、今日完结
+    def __clearUI(self):
+        # 清空今日待办
+        for items in self.__ui_task_list:
+            for item in items:
+                item.clear()
+                item.hide()
+        # 清空今日完结
+        for item in self.__ui_completed_list:
+            item.clear()
+            item.hide()
 
     def timer(self):
         global c
@@ -649,29 +633,36 @@ class Root(QMainWindow):
         # get time
         currentTime = QTime.currentTime()
         display_text = currentTime.toString('hh:mm:ss')
-        self.ui.now_time.setText(display_text)
-
-        # set date
-        date_full2 = str(datetime.now().strftime('%Y-%m-%d'))
-        week = {0:'星期一', 1:'星期二', 2:'星期三', 3:'星期四', 4:'星期五', 5:'星期六', 6:'星期日'}
-        today = '%s年%s月%s日，%s' % (date_full2[:4], date_full2[5:7], date_full2[8:], week[datetime.now().weekday()])
-        self.ui.date.setText(today)
-        self.ui.date2.setText(today)
-        self.ui.date3.setText(today)
+        #self.ui.now_time.setText(display_text)
 
         # set date - database
         date_full = str(datetime.now().strftime('%Y-%m-%d')).split('-')
-        date_name = 'date' + date_full[0] + date_full[1] + date_full[2]
+        name = 'date' + date_full[0] + date_full[1] + date_full[2]
+        #日切
+        if name != date_name:
+            date_name = name
 
-        conn = sqlite3.connect('todo.db')
-        c = conn.cursor()
-        c.execute(f'''CREATE TABLE IF NOT EXISTS {date_name}(
-                    id integer PRIMARY KEY,
-                    task text,
-                    status integer,
-                    time time
-                 )''')
-        conn.commit()
+            # 刷新界面显示日期
+            date_full2 = str(datetime.now().strftime('%Y-%m-%d'))
+            week = {0:'星期一', 1:'星期二', 2:'星期三', 3:'星期四', 4:'星期五', 5:'星期六', 6:'星期日'}
+            today = '%s年%s月%s日，%s' % (date_full2[:4], date_full2[5:7], date_full2[8:], week[datetime.now().weekday()])
+            self.ui.date.setText(today)
+            self.ui.date2.setText(today)
+            self.ui.date3.setText(today)
+
+            # 清空UI
+            self.__clearUI()
+
+            # 切换数据库表
+            conn = sqlite3.connect('todo.db')
+            c = conn.cursor()
+            c.execute(f'''CREATE TABLE IF NOT EXISTS {date_name}(
+                        id integer PRIMARY KEY,
+                        task text,
+                        status integer,
+                        time time
+                    )''')
+            conn.commit()
 
         # Update task
         self.set_task()
@@ -695,15 +686,23 @@ class Root(QMainWindow):
         # id task status time
         for row in task:
             td2 = datetime(int(date_full[0]), int(date_full[1]), int(date_full[2]), int(row[3][:2]), int(row[3][3:5]), int(row[3][-2:]), 0) - datetime(int(date_full[0]), int(date_full[1]), int(date_full[2]), 0, 0, 0, 0)
-            if td2 > td1 and (td2 - td1).seconds == times * 60:
-                self.taskIdActive = row[0]
-                print(row[1])
-                self.ui.tasktime_task.setText('【%s】%s'%(row[3], row[1]))
-                self.ui.stackedWidget.setCurrentWidget(self.ui.stop_timer)
+            if td2 > td1:
+                if (td2 - td1).seconds == times * 60:
+                    self.__taskIdActive = row[0]
+                    self.ui.tasktime_task.setText(row[1])
+                    self.__isCountdown = True
+                    self.ui.now_time.setText('00:%02d:00'%(times))
+                    self.ui.stackedWidget.setCurrentWidget(self.ui.stop_timer)
+                if (td2 - td1).seconds < times * 60 and self.__isCountdown:
+                    hour = int((td2 - td1).seconds/60/60)
+                    minute = int(((td2 - td1).seconds - hour * 60 * 60)/60)
+                    second = (td2 - td1).seconds - hour * 60 * 60 - minute * 60
+                    self.ui.now_time.setText('%02d:%02d:%02d'%(hour, minute, second))
             if td2 == td1:
-                self.taskIdActive = row[0]
-                print(row[1])
-                self.ui.tasktime_task.setText('【%s】%s'%(row[3], row[1]))
+                self.__isCountdown = False
+                self.__taskIdActive = row[0]
+                self.ui.tasktime_task.setText(row[1])
+                self.ui.now_time.setText(row[3])
                 self.ui.stackedWidget.setCurrentWidget(self.ui.stop_timer)
                 # 播提示音
                 self.__play(row[1], loops)
@@ -724,9 +723,9 @@ class Root(QMainWindow):
         global date_name
         global number
 
-        if self.taskIdActive > -1:
+        if self.__taskIdActive > -1:
             # 获取task
-            rows = c.execute(f'SELECT task FROM %s WHERE id=%s'%(date_name, self.taskIdActive))
+            rows = c.execute(f'SELECT task FROM %s WHERE id=%s'%(date_name, self.__taskIdActive))
             for row in rows:
                 task = row[0]
                 break
@@ -750,14 +749,14 @@ class Root(QMainWindow):
                         conn.commit()
                         if crontab != '* * * * *':
                             # 更新下次执行时间
-                            updatetask(c, conn, date_name, self.taskIdActive, date, time, number)
+                            updatetask(c, conn, date_name, self.__taskIdActive, date, time, number)
                 else:
                     if crontab != '* * * * *':
                         # 插入定时任务
                         c.execute("""INSERT INTO crontabtask(id, task, status, crontab) VALUES (null,'{}',{},'{}');""".format(task, 0, crontab))
                         conn.commit()
                         # 更新下次执行时间
-                        updatetask(c, conn, date_name, self.taskIdActive, date, time, number)
+                        updatetask(c, conn, date_name, self.__taskIdActive, date, time, number)
             except Exception as e:
                 self.ui.crontab.setText('* * * * *')
                 crontab = '* * * * *' #设置为无效
@@ -773,7 +772,7 @@ class Root(QMainWindow):
                     mm = mm if len(mm) == 2 else '0' + mm
                     ss = ss if len(ss) == 2 else '0' + ss
                     clock = hh+':'+mm+':'+ss
-                    c.execute(f'UPDATE %s SET time="%s" WHERE id=%s'%(date_name, clock, self.taskIdActive))
+                    c.execute(f'UPDATE %s SET time="%s" WHERE id=%s'%(date_name, clock, self.__taskIdActive))
                     conn.commit()
 
     def stop_clock(self):
@@ -789,10 +788,11 @@ class Root(QMainWindow):
         except Exception as e:
             pass
         
+        self.__isCountdown = False
         currentTime = QTime.currentTime()
         display_text = currentTime.toString('hh:mm:ss')
         td1 = datetime(int(date_full[0]), int(date_full[1]), int(date_full[2]), int(display_text[:2]), int(display_text[3:5]), int(display_text[-2:]), 0) - datetime(int(date_full[0]), int(date_full[1]), int(date_full[2]), 0, 0, 0, 0)
-        rows = c.execute(f'SELECT * FROM {date_name} WHERE id={self.taskIdActive} AND status=0')
+        rows = c.execute(f'SELECT * FROM {date_name} WHERE id={self.__taskIdActive} AND status=0')
         # id task status time
         for row in rows:
             td2 = datetime(int(date_full[0]), int(date_full[1]), int(date_full[2]), int(row[3][:2]), int(row[3][3:5]), int(row[3][-2:]), 0) - datetime(int(date_full[0]), int(date_full[1]), int(date_full[2]), 0, 0, 0, 0)
@@ -800,7 +800,7 @@ class Root(QMainWindow):
                 return
 
         # 定时时间已到达，需更新数据库
-        c.execute(f'UPDATE %s SET status=1 WHERE id=%s'%(date_name, self.taskIdActive))
+        c.execute(f'UPDATE %s SET status=1 WHERE id=%s'%(date_name, self.__taskIdActive))
         conn.commit()
 
         # 刷新列表
@@ -814,8 +814,8 @@ class Root(QMainWindow):
         global date_name
         global number
 
-        if self.taskIdActive > -1:
-            sql_update_query = """UPDATE {} SET status=1 WHERE id='{}'""".format(date_name, self.taskIdActive)
+        if self.__taskIdActive > -1:
+            sql_update_query = """UPDATE {} SET status=1 WHERE id='{}'""".format(date_name, self.__taskIdActive)
             c.execute(sql_update_query)
             conn.commit()
             self.remover(number)
@@ -825,42 +825,17 @@ class Root(QMainWindow):
         global c
         global conn
         global date_name
-        self.ui.com1_cal.hide()
-        self.ui.com2_cal.hide()
-        self.ui.com3_cal.hide()
-        self.ui.com4_cal.hide()
-        self.ui.com5_cal.hide()
-        self.ui.com6_cal.hide()
-        self.ui.com7_cal.hide()
-        self.ui.com8_cal.hide()
-        self.ui.task1_cal.hide()
-        self.ui.task2_cal.hide()
-        self.ui.task3_cal.hide()
-        self.ui.task4_cal.hide()
-        self.ui.task5_cal.hide()
-        self.ui.task6_cal.hide()
-        self.ui.task7_cal.hide()
-        self.ui.task8_cal.hide()
-        self.ui.True1.hide()
-        self.ui.True2.hide()
-        self.ui.True3.hide()
-        self.ui.True4.hide()
-        self.ui.True5.hide()
-        self.ui.True6.hide()
-        self.ui.True7.hide()
-        self.ui.True8.hide()
-        self.ui.False1.hide()
-        self.ui.False2.hide()
-        self.ui.False3.hide()
-        self.ui.False4.hide()
-        self.ui.False5.hide()
-        self.ui.False6.hide()
-        self.ui.False7.hide()
-        self.ui.False8.hide()
+
+        # 清空当前信息
+        for item in self.__ui_calender_com_List:
+            item[0].hide()
+            item[1].hide()
+        for item in self.__ui_calender_task_List:
+            item[0].hide()
+            item[1].hide()
 
         if len(self.ui.date_cal.text()) == 0:
             now = datetime.now()
-            self.ui.date_cal.clear()
             self.ui.date_cal.setText(now.strftime('%Y/%m/%d'))
         
         try:
@@ -868,8 +843,8 @@ class Root(QMainWindow):
                 names = self.ui.date_cal.text().split('/')
                 if not (2021 <= int(names[0]) and 1<=int(names[1])<=12 and 1<=int(names[2])<=31):
                     return
-                name = 'date'+names[0]+names[1]+names[2]
-                c.execute(f'''CREATE TABLE IF NOT EXISTS {name}(
+                table = 'date'+names[0]+names[1]+names[2]
+                c.execute(f'''CREATE TABLE IF NOT EXISTS {table}(
                             id integer PRIMARY KEY,
                             task text,
                             status integer,
@@ -880,13 +855,13 @@ class Root(QMainWindow):
             return
 
         # 查询今日任务
-        tasks = c.execute(f'SELECT * FROM {name}')
+        tasks = c.execute(f'SELECT * FROM {table}')
         taskList = []
         for task in tasks:
             taskList.append(task)
         # 查询crontab任务
         try:
-            if name != date_name:
+            if table != date_name:
                 rows = c.execute(f'SELECT task,crontab FROM crontabtask WHERE crontab<>"* * * * *"')
                 for row in rows:
                     task = row[0]
@@ -895,7 +870,7 @@ class Root(QMainWindow):
                     time = iter.get_next(datetime)
                     date = 'date' + time.strftime("%Y%m%d")
                     time = time.strftime('%H:%M:%S')
-                    if date == name:
+                    if date == table:
                         taskList.append((-1, task, 0, time))
         except Exception as e:
             pass
@@ -904,76 +879,18 @@ class Root(QMainWindow):
         count_task = 0
         # id, task, status, time
         for row in taskList:
-            if row[2] == 1 and len(row[1]) != 0:
+            if row[2] == 1 and len(row[1]) != 0 and count_com < len(self.__ui_calender_com_List):
+                self.__ui_calender_com_List[count_com][0].show()
+                self.__ui_calender_com_List[count_com][0].setText(row[1])
+                self.__ui_calender_com_List[count_com][1].show()
                 count_com += 1
-                if count_com == 1:
-                    self.ui.com1_cal.show()
-                    self.ui.True1.show()
-                    self.ui.com1_cal.setText(row[1])
-                elif count_com == 2:
-                    self.ui.com2_cal.show()
-                    self.ui.True2.show()
-                    self.ui.com2_cal.setText(row[1])
-                elif count_com == 3:
-                    self.ui.com3_cal.show()
-                    self.ui.True3.show()
-                    self.ui.com3_cal.setText(row[1])
-                elif count_com == 4:
-                    self.ui.com4_cal.show()
-                    self.ui.True4.show()
-                    self.ui.com4_cal.setText(row[1])
-                elif count_com == 5:
-                    self.ui.com5_cal.show()
-                    self.ui.True5.show()
-                    self.ui.com5_cal.setText(row[1])
-                elif count_com == 6:
-                    self.ui.com6_cal.show()
-                    self.ui.True6.show()
-                    self.ui.com6_cal.setText(row[1])
-                elif count_com == 7:
-                    self.ui.com7_cal.show()
-                    self.ui.True7.show()
-                    self.ui.com7_cal.setText(row[1])
-                elif count_com == 8:
-                    self.ui.com8_cal.show()
-                    self.ui.True8.show()
-                    self.ui.com8_cal.setText(row[1])
-
-            elif row[2] == 0 and len(row[1]) != 0:
+            
+            if row[2] == 0 and len(row[1]) != 0 and count_task < len(self.__ui_calender_task_List):
+                self.__ui_calender_task_List[count_task][0].show()
+                self.__ui_calender_task_List[count_task][0].setText(row[1])
+                self.__ui_calender_task_List[count_task][1].show()
                 count_task += 1
-                if count_task == 1:
-                    self.ui.task1_cal.show()
-                    self.ui.False1.show()
-                    self.ui.task1_cal.setText(row[1])
-                elif count_task == 2:
-                    self.ui.task2_cal.show()
-                    self.ui.False2.show()
-                    self.ui.task2_cal.setText(row[1])
-                elif count_task == 3:
-                    self.ui.task3_cal.show()
-                    self.ui.False3.show()
-                    self.ui.task3_cal.setText(row[1])
-                elif count_task == 4:
-                    self.ui.task4_cal.show()
-                    self.ui.False4.show()
-                    self.ui.task4_cal.setText(row[1])
-                elif count_task == 5:
-                    self.ui.task5_cal.show()
-                    self.ui.False5.show()
-                    self.ui.task5_cal.setText(row[1])
-                elif count_task == 6:
-                    self.ui.task6_cal.show()
-                    self.ui.False6.show()
-                    self.ui.task6_cal.setText(row[1])
-                elif count_task == 7:
-                    self.ui.task7_cal.show()
-                    self.ui.False7.show()
-                    self.ui.task7_cal.setText(row[1])
-                elif count_task == 8:
-                    self.ui.task8_cal.show()
-                    self.ui.False8.show()
-                    self.ui.task8_cal.setText(row[1])
-
+               
     def contact(self):
         webbrowser.open('https://github.com/217heidai')
 
@@ -983,4 +900,5 @@ if __name__ == '__main__':
     QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
     app = QApplication(sys.argv)
     root = Root()
+    #root.showFullScreen() # 全屏
     sys.exit(app.exec_())
